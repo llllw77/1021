@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正義與勇氣的印記：湯德章律師與台南記憶網</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Anime.js (動畫與互動庫) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+    <!-- FontAwesome 圖標 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts: Noto Serif TC & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fcfbf9',
+                            100: '#f5f2eb',
+                            200: '#e8e1d3',
+                            300: '#d5c7b1',
+                            700: '#5c5243',
+                            800: '#383229',
+                            900: '#1a1714',
+                            accent: '#c85a32' // 淡赭紅，作為溫和的歷史線索點綴
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Noto Serif TC', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #fcfbf9;
+            color: #1a1714;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .serif-font {
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        /* 繪圖與動態 Canvas 背景 */
+        #hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* 散落與拼湊動態視覺塊 */
+        .stagger-container {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 12px;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            inset: 0;
+            opacity: 0.18;
+            pointer-events: none;
+        }
+
+        .stagger-item {
+            background-color: #383229;
+            border-radius: 6px;
+            transform-origin: center;
+            will-change: transform, opacity;
+        }
+
+        /* 可拖拽選單 / 記憶圖卡樣式 */
+        .draggable-card {
+            touch-action: none;
+            cursor: grab;
+            user-select: none;
+            will-change: transform;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .draggable-card:active {
+            cursor: grabbing;
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 自訂細緻滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f2eb;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d5c7b1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5c5243;
+        }
+    </style>
+</head>
+<body class="bg-brand-50 text-brand-900 antialiased selection:bg-brand-200">
+
+    <!-- 導覽列 Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 bg-brand-50/90 backdrop-blur-md border-b border-brand-200/60 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-8 h-8 rounded-full border border-brand-800 flex items-center justify-center font-serif text-sm font-bold group-hover:bg-brand-800 group-hover:text-white transition-colors">
+                    德
+                </div>
+                <span class="font-serif text-lg font-semibold tracking-wide text-brand-900">湯德章律師記憶網</span>
+            </a>
+
+            <!-- 桌面端導覽 -->
+            <div class="hidden md:flex items-center gap-8 text-sm text-brand-700 font-medium">
+                <a href="#roles" class="hover:text-brand-900 transition-colors">探索入口</a>
+                <a href="#timeline" class="hover:text-brand-900 transition-colors">年代時間線</a>
+                <a href="#explore-map" class="hover:text-brand-900 transition-colors">故事地圖</a>
+                <a href="#draggable-archive" class="hover:text-brand-900 transition-colors">記憶拼圖</a>
+            </div>
+
+            <!-- 行動端選單按鈕 -->
+            <button id="mobile-menu-btn" class="md:hidden p-2 text-brand-800 hover:text-brand-900 focus:outline-none" aria-label="打開選單">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </div>
+
+        <!-- 行動端選單面板 -->
+        <div id="mobile-menu" class="hidden md:hidden bg-brand-50 border-b border-brand-200 px-4 pt-2 pb-6 space-y-3">
+            <a href="#roles" class="block py-2 text-brand-700 hover:text-brand-900 font-medium">探索入口</a>
+            <a href="#timeline" class="block py-2 text-brand-700 hover:text-brand-900 font-medium">年代時間線</a>
+            <a href="#explore-map" class="block py-2 text-brand-700 hover:text-brand-900 font-medium">故事地圖</a>
+            <a href="#draggable-archive" class="block py-2 text-brand-700 hover:text-brand-900 font-medium">記憶拼圖</a>
+        </div>
+    </nav>
+
+    <!-- 1. Hero Banner 區塊：故事探索開端與 Stagger 散落/聚合動態特效 -->
+    <header class="relative min-h-screen pt-24 pb-16 flex items-center justify-center overflow-hidden border-b border-brand-200/50">
+        <!-- 粒子動態背板 (特效 1: Stagger Visualizer & Anime.js Blend Shape Effect) -->
+        <div id="stagger-grid" class="stagger-container"></div>
+        
+        <div class="relative z-10 max-w-4xl mx-auto px-4 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand-300 bg-brand-100/80 text-xs text-brand-700 mb-6 backdrop-blur-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse"></span>
+                台南人權與歷史文化記憶庫
+            </div>
+            
+            <h1 class="serif-font text-3xl sm:text-5xl md:text-6xl text-brand-900 font-bold leading-tight mb-6">
+                沿著故事探索<br class="hidden sm:inline"/>
+                <span class="text-brand-800 font-normal underline decoration-brand-300 underline-offset-8">湯德章律師</span> 與台南的時空刻痕
+            </h1>
+
+            <p class="text-brand-700 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+                將冷冰冰的歷史文獻，還原為觸動人心的生活軌跡。從1907年台江平原的起點，到1947年圓環的抉擇，讓我們一起走進人權精神與人權歷史的核心。
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <a href="#roles" class="w-full sm:w-auto px-7 py-3.5 bg-brand-900 hover:bg-brand-800 text-brand-50 rounded-lg text-sm font-medium shadow-sm transition-all transform hover:-translate-y-0.5">
+                    開始探索故事
+                </a>
+                <button id="trigger-scatter-btn" class="w-full sm:w-auto px-6 py-3.5 border border-brand-300 hover:border-brand-700 bg-white/60 hover:bg-white text-brand-800 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> 拼湊歷史碎片 (重新觸發動畫)
+                </button>
+            </div>
+        </div>
+
+        <!-- 滾動提示 -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center opacity-60 hover:opacity-100 transition-opacity">
+            <span class="text-xs text-brand-700 mb-2">向下滾動</span>
+            <div class="w-4 h-7 rounded-full border border-brand-700 flex justify-center pt-1">
+                <div class="w-1 h-2 bg-brand-700 rounded-full animate-bounce"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. 三大使用者目標入口 (角色區塊) -->
+    <section id="roles" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="text-center max-w-2xl mx-auto mb-16">
+            <h2 class="serif-font text-2xl sm:text-3xl font-bold text-brand-900 mb-4">客製化探索路徑</h2>
+            <p class="text-brand-700 text-sm sm:text-base">無論您的需求為何，都能在這裡找到合適深度的歷史內容與檔案資料。</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- 入口 1: 一般旅客 -->
+            <div class="bg-white border border-brand-200/80 rounded-xl p-8 hover:shadow-lg transition-all duration-300 flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 rounded-lg bg-brand-100 flex items-center justify-center text-brand-800 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-map-location-dot text-xl"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-brand-accent tracking-widest uppercase">一般旅客 / 走讀愛好者</span>
+                    <h3 class="serif-font text-xl font-bold text-brand-900 mt-2 mb-3">城市走讀導覽</h3>
+                    <p class="text-brand-700 text-sm leading-relaxed mb-6">
+                        精選台南舊城區 5 個核心歷史場域，搭配散步地圖與簡易語音簡介，適合安排半日漫遊。
+                    </p>
+                </div>
+                <a href="#explore-map" onclick="switchTab('location')" class="inline-flex items-center text-sm font-medium text-brand-800 hover:text-brand-accent transition-colors gap-2">
+                    瀏覽走讀地圖 <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
+            </div>
+
+            <!-- 入口 2: 學生研究者 -->
+            <div class="bg-white border border-brand-200/80 rounded-xl p-8 hover:shadow-lg transition-all duration-300 flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 rounded-lg bg-brand-100 flex items-center justify-center text-brand-800 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-book-bookmark text-xl"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-brand-accent tracking-widest uppercase">學生 / 學術研究者</span>
+                    <h3 class="serif-font text-xl font-bold text-brand-900 mt-2 mb-3">完整歷史文獻與編年</h3>
+                    <p class="text-brand-700 text-sm leading-relaxed mb-6">
+                        包含日治時期裁判所記錄、二二八事件調查檔案，提供詳細的時間軸索引與佐證文獻。
+                    </p>
+                </div>
+                <a href="#timeline" class="inline-flex items-center text-sm font-medium text-brand-800 hover:text-brand-accent transition-colors gap-2">
+                    查閱編年史料 <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
+            </div>
+
+            <!-- 入口 3: 文化工作者 -->
+            <div class="bg-white border border-brand-200/80 rounded-xl p-8 hover:shadow-lg transition-all duration-300 flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 rounded-lg bg-brand-100 flex items-center justify-center text-brand-800 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-landmark text-xl"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-brand-accent tracking-widest uppercase">文化工作者 / 教育者</span>
+                    <h3 class="serif-font text-xl font-bold text-brand-900 mt-2 mb-3">文化資產與保存運動</h3>
+                    <p class="text-brand-700 text-sm leading-relaxed mb-6">
+                        紀錄「湯德章故居」保存群眾募資、台南州會復原等當代民間文化資產活化歷程與教學資源。
+                    </p>
+                </div>
+                <a href="#draggable-archive" class="inline-flex items-center text-sm font-medium text-brand-800 hover:text-brand-accent transition-colors gap-2">
+                    探索記憶資產 <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. 可探索的時間線 (依年代排列，點擊展開簡短故事與舊照片/插畫) -->
+    <section id="timeline" class="py-20 bg-brand-100/50 border-y border-brand-200/60">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="text-xs font-semibold text-brand-accent tracking-widest uppercase">Chronology</span>
+                <h2 class="serif-font text-2xl sm:text-3xl font-bold text-brand-900 mt-1 mb-4">生命軌跡與歷史轉捩點</h2>
+                <p class="text-brand-700 text-sm sm:text-base">點擊時間節點，深入解鎖湯德章律師的人生故事與當時的社會印記。</p>
+            </div>
+
+            <!-- 時間線控制按鈕區 -->
+            <div class="relative">
+                <!-- 時間中軸線 (桌面端) -->
+                <div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-brand-300 -translate-x-1/2"></div>
+
+                <div id="timeline-events" class="space-y-12">
+                    <!-- 時間點 1 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row items-center group" data-year="1907">
+                        <div class="w-full md:w-1/2 md:pr-12 md:text-right mb-4 md:mb-0">
+                            <span class="text-brand-accent font-serif font-bold text-xl">1907 年</span>
+                            <h3 class="serif-font text-lg font-bold text-brand-900 mt-1">誕生於台南：跨文化血統的起點</h3>
+                            <p class="text-brand-700 text-sm mt-2 leading-relaxed">
+                                父親為日本警察新居德藏，母親為台南農家婦女湯頭。父親於噍吧哖事件中殉職，湯德章隨母姓，在艱困環境中成長，養成剛正不阿的性格。
+                            </p>
+                        </div>
+                        <!-- 節點圖示 -->
+                        <button onclick="toggleTimelineDetail(this)" class="z-10 w-10 h-10 rounded-full bg-white border-2 border-brand-800 text-brand-800 flex items-center justify-center font-bold shadow-md hover:bg-brand-800 hover:text-white transition-all transform hover:scale-110 focus:outline-none" aria-label="展開詳細">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                        <div class="w-full md:w-1/2 md:pl-12 mt-4 md:mt-0">
+                            <div class="bg-white p-4 rounded-lg border border-brand-200 shadow-sm hidden timeline-detail">
+                                <div class="aspect-video bg-brand-100 rounded mb-3 flex items-center justify-center text-brand-700 text-xs overflow-hidden relative">
+                                    <svg class="w-full h-full text-brand-200" viewBox="0 0 200 120" fill="currentColor">
+                                        <rect width="200" height="120" fill="#f5f2eb"/>
+                                        <path d="M20 100 L60 40 L100 100 Z" fill="#d5c7b1"/>
+                                        <path d="M80 100 L130 50 L180 100 Z" fill="#e8e1d3"/>
+                                        <text x="100" y="65" text-anchor="middle" fill="#5c5243" font-size="10" font-family="serif">【意象：台南舊日農村景貌】</text>
+                                    </svg>
+                                </div>
+                                <p class="text-xs text-brand-800">【歷史細節】湯德章少年時期勤奮向學，後考入臺南師範學校（今國立臺南大學前身），因反抗不公制度而退學，隨後投身警察體系。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 時間點 2 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row-reverse items-center group" data-year="1935">
+                        <div class="w-full md:w-1/2 md:pl-12 md:text-left mb-4 md:mb-0">
+                            <span class="text-brand-accent font-serif font-bold text-xl">1935 - 1943 年</span>
+                            <h3 class="serif-font text-lg font-bold text-brand-900 mt-1">遠赴日本：高第司法人員考試及第</h3>
+                            <p class="text-brand-700 text-sm mt-2 leading-relaxed">
+                                擔任警察期間深感台人受壓迫，決心辭職赴日深造。考取日本中央大學法律系，並高分通過日本高等文官司法人員考試，返回台南執業律師。
+                            </p>
+                        </div>
+                        <button onclick="toggleTimelineDetail(this)" class="z-10 w-10 h-10 rounded-full bg-white border-2 border-brand-800 text-brand-800 flex items-center justify-center font-bold shadow-md hover:bg-brand-800 hover:text-white transition-all transform hover:scale-110 focus:outline-none" aria-label="展開詳細">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                        <div class="w-full md:w-1/2 md:pr-12 mt-4 md:mt-0">
+                            <div class="bg-white p-4 rounded-lg border border-brand-200 shadow-sm hidden timeline-detail">
+                                <div class="aspect-video bg-brand-100 rounded mb-3 flex items-center justify-center text-brand-700 text-xs overflow-hidden">
+                                    <svg class="w-full h-full" viewBox="0 0 200 120" fill="none" stroke="#5c5243" stroke-width="1.5">
+                                        <rect x="30" y="20" width="140" height="80" rx="4" fill="#fcfbf9"/>
+                                        <line x1="50" y1="40" x2="150" y2="40" stroke="#d5c7b1"/>
+                                        <line x1="50" y1="60" x2="150" y2="60" stroke="#d5c7b1"/>
+                                        <line x1="50" y1="80" x2="110" y2="80" stroke="#d5c7b1"/>
+                                        <text x="100" y="55" text-anchor="middle" fill="#383229" font-size="9" font-family="serif">中央大學法學證書意象</text>
+                                    </svg>
+                                </div>
+                                <p class="text-xs text-brand-800">【重要事蹟】返台後免費為貧苦台籍民眾打官司，並堅持不收賄賂，深受台南市民敬仰。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 時間點 3 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row items-center group" data-year="1947">
+                        <div class="w-full md:w-1/2 md:pr-12 md:text-right mb-4 md:mb-0">
+                            <span class="text-brand-accent font-serif font-bold text-xl">1947 年 3 月</span>
+                            <h3 class="serif-font text-lg font-bold text-brand-900 mt-1">二二八事件：保全青年與正義的抉擇</h3>
+                            <p class="text-brand-700 text-sm mt-2 leading-relaxed">
+                                二二八事件爆發，湯德章被推舉為「二二八事件處理委員會臺南分會」治安組長。他力保校園秩序，並毀棄相關青年名冊，避免無辜學生遭受波及。
+                            </p>
+                        </div>
+                        <button onclick="toggleTimelineDetail(this)" class="z-10 w-10 h-10 rounded-full bg-white border-2 border-brand-800 text-brand-800 flex items-center justify-center font-bold shadow-md hover:bg-brand-800 hover:text-white transition-all transform hover:scale-110 focus:outline-none" aria-label="展開詳細">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                        <div class="w-full md:w-1/2 md:pl-12 mt-4 md:mt-0">
+                            <div class="bg-white p-4 rounded-lg border border-brand-200 shadow-sm hidden timeline-detail">
+                                <div class="aspect-video bg-brand-100 rounded mb-3 flex items-center justify-center text-brand-700 text-xs overflow-hidden">
+                                    <svg class="w-full h-full" viewBox="0 0 200 120" fill="none">
+                                        <circle cx="100" cy="60" r="45" stroke="#c85a32" stroke-width="2" stroke-dasharray="4 2"/>
+                                        <text x="100" y="63" text-anchor="middle" fill="#1a1714" font-size="10" font-family="serif">原台南大正公園（今湯德章紀念公園）</text>
+                                    </svg>
+                                </div>
+                                <p class="text-xs text-brand-800">【歷史轉捩】3月13日於大正公園就義。臨刑前高呼「台灣人萬歲」，展現無畏勇氣。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 時間點 4 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row-reverse items-center group" data-year="2014">
+                        <div class="w-full md:w-1/2 md:pl-12 md:text-left mb-4 md:mb-0">
+                            <span class="text-brand-accent font-serif font-bold text-xl">2014 - 至今</span>
+                            <h3 class="serif-font text-lg font-bold text-brand-900 mt-1">正義與勇氣紀念日：當代記憶再現</h3>
+                            <p class="text-brand-700 text-sm mt-2 leading-relaxed">
+                                台南市政府將 3 月 13 日定為「台南市正義與勇氣紀念日」。2020年民間發起群眾募資成功保存湯德章故居，開啟在地歷史深化與走讀熱潮。
+                            </p>
+                        </div>
+                        <button onclick="toggleTimelineDetail(this)" class="z-10 w-10 h-10 rounded-full bg-white border-2 border-brand-800 text-brand-800 flex items-center justify-center font-bold shadow-md hover:bg-brand-800 hover:text-white transition-all transform hover:scale-110 focus:outline-none" aria-label="展開詳細">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                        <div class="w-full md:w-1/2 md:pr-12 mt-4 md:mt-0">
+                            <div class="bg-white p-4 rounded-lg border border-brand-200 shadow-sm hidden timeline-detail">
+                                <p class="text-xs text-brand-800">【民間能量】文化資產不再只是冷冰冰的古蹟，而是結合公民力量、學校教育與數位走讀的全民歷史課堂。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. 探索頁面：年代、地點與故事多維度動態切換 -->
+    <section id="explore-map" class="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+            <div>
+                <span class="text-xs font-semibold text-brand-accent tracking-widest uppercase">Interactive Explorer</span>
+                <h2 class="serif-font text-2xl sm:text-3xl font-bold text-brand-900 mt-1">多維度場域與故事切換</h2>
+            </div>
+            
+            <!-- 切換頁籤 (Tab) -->
+            <div class="mt-6 md:mt-0 flex p-1 bg-brand-100 rounded-lg border border-brand-200">
+                <button onclick="switchTab('location')" id="tab-btn-location" class="px-5 py-2 text-xs font-medium rounded-md transition-all bg-white text-brand-900 shadow-sm">
+                    <i class="fa-solid fa-location-dot mr-1"></i> 地點探索
+                </button>
+                <button onclick="switchTab('story')" id="tab-btn-story" class="px-5 py-2 text-xs font-medium rounded-md transition-all text-brand-700 hover:text-brand-900">
+                    <i class="fa-solid fa-book-open mr-1"></i> 主題故事
+                </button>
+            </div>
+        </div>
+
+        <!-- 內容呈現區 -->
+        <div class="grid lg:grid-cols-12 gap-8 items-start">
+            <!-- 左側地圖 / 地點清單 -->
+            <div class="lg:col-span-5 bg-white p-6 rounded-xl border border-brand-200">
+                <h3 class="serif-font font-bold text-lg text-brand-900 mb-4 pb-2 border-b border-brand-100 flex justify-between items-center">
+                    <span id="tab-left-title">台南城區相關地點</span>
+                    <span class="text-xs font-normal text-brand-700">點擊切換查看</span>
+                </h3>
+
+                <div id="tab-list-container" class="space-y-3">
+                    <!-- JS 動態生成項目 -->
+                </div>
+            </div>
+
+            <!-- 右側詳細資訊展示面板 (配合動態 fade/slide 動畫) -->
+            <div class="lg:col-span-7 bg-brand-100/40 p-6 sm:p-8 rounded-xl border border-brand-200 relative min-h-[380px] flex flex-col justify-between">
+                <div id="detail-display-panel" class="transition-all duration-300">
+                    <!-- JS 動態寫入內容 -->
+                </div>
+
+                <div class="mt-8 pt-4 border-t border-brand-200/80 flex items-center justify-between text-xs text-brand-700">
+                    <span><i class="fa-solid fa-compass mr-1"></i> 台南文化走讀建議路線</span>
+                    <span class="font-mono text-brand-800">Tainan Memory Map #01</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. 可拖拽實體選單/記憶物件庫 (特效 2: Draggable Floating Menu / Photo Cards) -->
+    <section id="draggable-archive" class="py-20 bg-brand-900 text-brand-50 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <span class="text-xs font-semibold text-brand-300 tracking-widest uppercase">Interactive Sandbox</span>
+                <h2 class="serif-font text-2xl sm:text-3xl font-bold text-white mt-1 mb-3">記憶卡片：自由探索歷史微光</h2>
+                <p class="text-brand-300 text-sm">
+                    【互動說明】滑鼠按住或用手指滑動拖拽下方懸浮卡片，探索湯德章律師手稿、昔日判決書與地方記憶片段。
+                </p>
+            </div>
+
+            <!-- 可拖拽互動區域 -->
+            <div id="drag-canvas" class="relative w-full h-[450px] sm:h-[500px] bg-brand-800/60 rounded-2xl border border-brand-700/60 overflow-hidden flex items-center justify-center p-4">
+                
+                <div class="absolute text-brand-700 text-xs font-serif pointer-events-none select-none">
+                    拖拽任意卡片至此區域中擺放
+                </div>
+
+                <!-- 卡片 1 -->
+                <div class="draggable-card absolute w-64 p-5 bg-brand-50 text-brand-900 rounded-xl shadow-2xl border border-brand-300" style="top: 15%; left: 8%;">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-brand-200 text-brand-800">史料文獻</span>
+                        <i class="fa-solid fa-grip-vertical text-brand-300 text-xs"></i>
+                    </div>
+                    <h4 class="serif-font font-bold text-base mb-2">日本高等文官考試合格登載</h4>
+                    <p class="text-xs text-brand-700 leading-relaxed mb-3">
+                        1942年通過日本司法科考試合格，展現優異的法律素養與突破族群限制的毅力。
+                    </p>
+                    <div class="text-[10px] text-brand-700 border-t border-brand-200 pt-2 flex justify-between">
+                        <span>典藏單位：台南市文化局</span>
+                        <i class="fa-solid fa-hand-pointer animate-pulse"></i>
+                    </div>
+                </div>
+
+                <!-- 卡片 2 -->
+                <div class="draggable-card absolute w-64 p-5 bg-brand-50 text-brand-900 rounded-xl shadow-2xl border border-brand-300" style="top: 40%; left: 38%;">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-brand-200 text-brand-800">地方資產</span>
+                        <i class="fa-solid fa-grip-vertical text-brand-300 text-xs"></i>
+                    </div>
+                    <h4 class="serif-font font-bold text-base mb-2">湯德章律師事務所 (故居)</h4>
+                    <p class="text-xs text-brand-700 leading-relaxed mb-3">
+                        位於台南市中西區友愛街，2020年發起全民募資成功購回，保存臺灣民間重要記憶。
+                    </p>
+                    <div class="text-[10px] text-brand-700 border-t border-brand-200 pt-2 flex justify-between">
+                        <span>現狀：文化紀念館</span>
+                        <i class="fa-solid fa-hand-pointer"></i>
+                    </div>
+                </div>
+
+                <!-- 卡片 3 -->
+                <div class="draggable-card absolute w-64 p-5 bg-brand-50 text-brand-900 rounded-xl shadow-2xl border border-brand-300" style="top: 20%; right: 10%;">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-brand-200 text-brand-800">人權精神</span>
+                        <i class="fa-solid fa-grip-vertical text-brand-300 text-xs"></i>
+                    </div>
+                    <h4 class="serif-font font-bold text-base mb-2">「臺灣人，萬歲！」</h4>
+                    <p class="text-xs text-brand-700 leading-relaxed mb-3">
+                        就義前以日語堅定拒絕屈服，其名言與精神深刻影響後世台灣人權意識與法治思想。
+                    </p>
+                    <div class="text-[10px] text-brand-700 border-t border-brand-200 pt-2 flex justify-between">
+                        <span>歷史核心精神</span>
+                        <i class="fa-solid fa-hand-pointer"></i>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 下方卡片復位與互動控制 -->
+            <div class="mt-6 flex justify-center">
+                <button id="reset-cards-btn" class="px-5 py-2.5 bg-brand-800 hover:bg-brand-700 border border-brand-600 text-xs font-medium rounded-lg transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> 重置卡片位置
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 頁尾 Footer -->
+    <footer class="bg-brand-50 border-t border-brand-200 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="text-center md:text-left">
+                <div class="serif-font font-bold text-lg text-brand-900 mb-1">湯德章律師與台南記憶網</div>
+                <p class="text-xs text-brand-700">讓歷史成為走進城市的入口 ‧ 數位文化資產教育推廣專案</p>
+            </div>
+
+            <div class="flex items-center gap-6 text-xs text-brand-700">
+                <a href="#roles" class="hover:text-brand-900">探索入口</a>
+                <a href="#timeline" class="hover:text-brand-900">年代時間軸</a>
+                <a href="#explore-map" class="hover:text-brand-900">故事地圖</a>
+                <a href="https://storystudio.tw/article/gushi/the-white-terror-in-xyinan" target="_blank" class="hover:text-brand-900 underline flex items-center gap-1">
+                    參考文獻 (StoryStudio) <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+            </div>
+        </div>
+        <div class="mt-8 text-center text-[11px] text-brand-700 border-t border-brand-200/50 pt-6">
+            &copy; 2026 台南歷史文化走讀導覽網. Designed for cultural heritage & education.
+        </div>
+    </footer>
+
+    <!-- JS 邏輯腳本：動畫、數據切換與 Drag/Stagger 特效 -->
+    <script>
+        // 1. 地點與主題故事數據庫
+        const locationData = [
+            {
+                id: 'loc-1',
+                name: '湯德章紀念公園 (原大正公園)',
+                year: '1947',
+                tag: '歷史事件發生地',
+                desc: '位於台南市圓環核心，為1947年湯德章律師就義之地。現立有湯德章半身銅像，並將3月13日訂為「正義與勇氣紀念日」。',
+                detail: '原日治時期大正公園，七條重要道路交會處。現為市民紀念人權與民主精神的重要標誌性場域。'
+            },
+            {
+                id: 'loc-2',
+                name: '湯德章故居 (友愛街)',
+                year: '1940s',
+                tag: '生活記憶 / 文資保存',
+                desc: '湯德章律師生前執行律師業務與生活之場所。2020年民間發起全台募資，成功購回並保存，現開放為文化紀念空間。',
+                detail: '展示湯律師生前的法學書籍、執業檔案與生活物件，定期舉辦人權與法治文化講座。'
+            },
+            {
+                id: 'loc-3',
+                name: '原台南州會',
+                year: '1935',
+                tag: '民主參政歷史',
+                desc: '日治時期的州議會建築，湯德章曾於此參與參議員選舉並高票當選參議員，為台南市民爭取權益。',
+                detail: '建築現已修復為台南市立圖書館中西區分館暨台南市歷史館，保留戰後民主發展的建築刻痕。'
+            },
+            {
+                id: 'loc-4',
+                name: '原台南警察署 (現南美館一館)',
+                year: '1930s',
+                tag: '職涯與轉捩',
+                desc: '湯德章早年擔任警察時期的重要辦公場所。後因無法忍受日籍上級對台灣人的歧視與不公，毅然辭職赴日攻讀法律。',
+                detail: '典雅的裝飾風藝術（Art Deco）古蹟建築，如今化身為美術館，連結歷史與現代藝術。'
+            }
+        ];
+
+        const storyData = [
+            {
+                id: 'story-1',
+                name: '剛正不阿：警察生涯到司法人員',
+                year: '1920-1940',
+                tag: '人物抉擇',
+                desc: '面對殖民地不平等的警察體制，湯德章選擇遠赴日本中央大學深造，考取極難通過的司法科考試，用法律保護同胞。',
+                detail: '「法律面前，人人平等」是他畢生堅持的信念，返台後成為無數弱勢平民的法律後盾。'
+            },
+            {
+                id: 'story-2',
+                name: '毀棄名冊：二二八事件中的無畏勇氣',
+                year: '1947',
+                tag: '關鍵抉擇',
+                desc: '二二八事件蔓延台南時，湯德章擔任治安組長維持城區秩序。被逮捕後堅決不交出參與活動的青年學生名冊並將其燒毀。',
+                detail: '這項決定拯救了數百名台南青年與學生的生命，自己卻獨自承擔了最嚴酷的後果。'
+            },
+            {
+                id: 'story-3',
+                name: '公民力量：當代故居保存運動',
+                year: '2020',
+                tag: '現代記憶',
+                desc: '當故居面臨拆除危機時，台灣社會在短時間內發起公民群眾募資，數千人響應共同搶救，創下臺灣公民文資保存紀錄。',
+                detail: '證明湯德章精神並非遠去歷史，而是深深落實於當代公民社會的集體記憶中。'
+            }
+        ];
+
+        let currentTab = 'location'; // 'location' or 'story'
+        let selectedItemId = 'loc-1';
+
+        // 2. 初始化 Stagger 散落/聚合動態特效 (特效 1 & 3)
+        function initStaggerVisualizer() {
+            const gridContainer = document.getElementById('stagger-grid');
+            gridContainer.innerHTML = '';
+            const totalItems = 32;
+
+            for (let i = 0; i < totalItems; i++) {
+                const item = document.createElement('div');
+                item.classList.add('stagger-item');
+                gridContainer.appendChild(item);
+            }
+
+            playStaggerAnimation();
+        }
+
+        // 觸發 Stagger 動畫 (使用 Anime.js 組合 blend 散落與幾何轉換)
+        function playStaggerAnimation() {
+            anime.timeline({
+                easing: 'easeInOutQuad'
+            })
+            .add({
+                targets: '.stagger-item',
+                translateX: function() { return anime.random(-120, 120); },
+                translateY: function() { return anime.random(-120, 120); },
+                rotate: function() { return anime.random(-180, 180); },
+                scale: function() { return anime.random(0.3, 1.2); },
+                opacity: function() { return anime.random(0.05, 0.25); },
+                duration: function() { return anime.random(600, 1200); },
+                delay: anime.stagger(30)
+            })
+            .add({
+                targets: '.stagger-item',
+                translateX: 0,
+                translateY: 0,
+                rotate: 0,
+                scale: 1,
+                opacity: 0.15,
+                duration: 1000,
+                delay: anime.stagger(20)
+            });
+        }
+
+        // 3. 多維度探索切換與渲染
+        function switchTab(tab) {
+            currentTab = tab;
+            const locBtn = document.getElementById('tab-btn-location');
+            const storyBtn = document.getElementById('tab-btn-story');
+            const leftTitle = document.getElementById('tab-left-title');
+
+            if (tab === 'location') {
+                locBtn.className = 'px-5 py-2 text-xs font-medium rounded-md transition-all bg-white text-brand-900 shadow-sm';
+                storyBtn.className = 'px-5 py-2 text-xs font-medium rounded-md transition-all text-brand-700 hover:text-brand-900';
+                leftTitle.innerText = '台南城區相關地點';
+                selectedItemId = locationData[0].id;
+            } else {
+                storyBtn.className = 'px-5 py-2 text-xs font-medium rounded-md transition-all bg-white text-brand-900 shadow-sm';
+                locBtn.className = 'px-5 py-2 text-xs font-medium rounded-md transition-all text-brand-700 hover:text-brand-900';
+                leftTitle.innerText = '主題故事軸線';
+                selectedItemId = storyData[0].id;
+            }
+
+            renderTabList();
+            renderDetailPanel();
+        }
+
+        function renderTabList() {
+            const container = document.getElementById('tab-list-container');
+            container.innerHTML = '';
+            const dataList = currentTab === 'location' ? locationData : storyData;
+
+            dataList.forEach(item => {
+                const isSelected = item.id === selectedItemId;
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-lg cursor-pointer border transition-all ${
+                    isSelected 
+                    ? 'bg-brand-100 border-brand-800 text-brand-900 font-semibold shadow-sm' 
+                    : 'bg-brand-50/50 border-brand-200/60 text-brand-700 hover:bg-brand-100/50'
+                }`;
+                
+                card.onclick = () => {
+                    selectedItemId = item.id;
+                    renderTabList();
+                    renderDetailPanel();
+                };
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-brand-accent">${item.year}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-brand-200/70 text-brand-800">${item.tag}</span>
+                    </div>
+                    <h4 class="serif-font font-bold text-sm mt-1">${item.name}</h4>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderDetailPanel() {
+            const panel = document.getElementById('detail-display-panel');
+            const dataList = currentTab === 'location' ? locationData : storyData;
+            const item = dataList.find(i => i.id === selectedItemId) || dataList[0];
+
+            // 觸發漸變過場
+            anime({
+                targets: panel,
+                opacity: [0, 1],
+                translateY: [10, 0],
+                duration: 400,
+                easing: 'easeOutCubic'
+            });
+
+            panel.innerHTML = `
+                <div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="px-2.5 py-1 rounded-full bg-brand-200 text-brand-800 text-xs font-semibold">${item.year}</span>
+                        <span class="text-xs text-brand-700 font-medium"><i class="fa-solid fa-tag text-[10px] mr-1"></i>${item.tag}</span>
+                    </div>
+                    <h3 class="serif-font text-2xl font-bold text-brand-900 mb-4">${item.name}</h3>
+                    <p class="text-brand-800 text-sm leading-relaxed mb-4">${item.desc}</p>
+                    <div class="p-4 bg-white/80 rounded-lg border border-brand-200/80 text-xs text-brand-700 leading-normal">
+                        <strong class="text-brand-900 block mb-1">【文化歷史深度文獻】</strong>
+                        ${item.detail}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4. 時間線詳細卡片切換
+        function toggleTimelineDetail(btn) {
+            const parent = btn.closest('.timeline-item');
+            const detail = parent.querySelector('.timeline-detail');
+            const icon = btn.querySelector('i');
+
+            if (detail.classList.contains('hidden')) {
+                detail.classList.remove('hidden');
+                icon.className = 'fa-solid fa-minus text-xs';
+                anime({
+                    targets: detail,
+                    opacity: [0, 1],
+                    translateY: [-10, 0],
+                    duration: 350,
+                    easing: 'easeOutCubic'
+                });
+            } else {
+                detail.classList.add('hidden');
+                icon.className = 'fa-solid fa-plus text-xs';
+            }
+        }
+
+        // 5. 可拖拽記憶卡片邏輯 (特效 2: Drag Menu / Interactive Cards with Touch Support)
+        function initDraggableCards() {
+            const cards = document.querySelectorAll('.draggable-card');
+            const container = document.getElementById('drag-canvas');
+
+            cards.forEach((card) => {
+                let isDragging = false;
+                let startX, startY, initialLeft, initialTop;
+
+                // 保存初始位置用於重置
+                card.dataset.initLeft = card.style.left;
+                card.dataset.initTop = card.style.top;
+
+                const onStart = (e) => {
+                    isDragging = true;
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    startX = clientX;
+                    startY = clientY;
+
+                    const rect = card.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+
+                    initialLeft = rect.left - containerRect.left;
+                    initialTop = rect.top - containerRect.top;
+
+                    // 置頂當前拖拽卡片
+                    cards.forEach(c => c.style.zIndex = '10');
+                    card.style.zIndex = '20';
+                };
+
+                const onMove = (e) => {
+                    if (!isDragging) return;
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    const deltaX = clientX - startX;
+                    const deltaY = clientY - startY;
+
+                    let newLeft = initialLeft + deltaX;
+                    let newTop = initialTop + deltaY;
+
+                    // 限制在容器範圍內
+                    const maxLeft = container.clientWidth - card.clientWidth;
+                    const maxTop = container.clientHeight - card.clientHeight;
+
+                    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                    newTop = Math.max(0, Math.min(newTop, maxTop));
+
+                    card.style.left = `${newLeft}px`;
+                    card.style.top = `${newTop}px`;
+                };
+
+                const onEnd = () => {
+                    isDragging = false;
+                };
+
+                // 滑鼠事件
+                card.addEventListener('mousedown', onStart);
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onEnd);
+
+                // 觸控螢幕事件 (Mobile Touch)
+                card.addEventListener('touchstart', onStart, { passive: true });
+                window.addEventListener('touchmove', onMove, { passive: true });
+                window.addEventListener('touchend', onEnd);
+            });
+
+            // 重置按鈕
+            document.getElementById('reset-cards-btn').onclick = () => {
+                cards.forEach(card => {
+                    anime({
+                        targets: card,
+                        left: card.dataset.initLeft,
+                        top: card.dataset.initTop,
+                        duration: 600,
+                        easing: 'easeInOutCubic'
+                    });
+                });
+            };
+        }
+
+        // 行動端選單切換
+        document.getElementById('mobile-menu-btn').onclick = () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        };
+
+        // 頁面初始化
+        window.onload = function () {
+            initStaggerVisualizer();
+            switchTab('location');
+            initDraggableCards();
+
+            // 觸發按鈕重新播放動畫
+            document.getElementById('trigger-scatter-btn').onclick = () => {
+                playStaggerAnimation();
+            };
+        };
+    </script>
+</body>
+</html>
